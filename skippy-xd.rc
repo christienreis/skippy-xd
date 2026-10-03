@@ -41,7 +41,7 @@ clientList = _NET_CLIENT_LIST
 
 # When compositors such as picom are not used
 # Turn on pseudo-transparency
-pseudoTrans = true
+pseudoTrans = false
 
 [multimonitor]
 
@@ -79,7 +79,7 @@ switchCycleDesktops = false
 exposeCycleDesktops = true
 
 # Relative minimal pixel distance between windows
-distance = 50
+distance = 36
 
 # Fill screen by upscaling windows
 upscaleWindows = false
@@ -97,7 +97,7 @@ animationRefresh = 60
 # To display background wallpaper:
 #   background = /home/richard/screenshots/256.png
 # For tinted background:
-#   background = #00000055
+#   background = #0B1020CC
 # For transparent background:
 #   background = None
 background = #00000055
@@ -114,7 +114,7 @@ leftFrameBorder = 0
 topFrameBorder = 0
 
 # Show window previews with rounded corners
-cornerRadius = 0
+cornerRadius = 18
 
 # Windows that were never shown before
 [filler]
@@ -132,10 +132,10 @@ iconSize = 48
 
 # Currently highlighted window
 [highlight]
-tint = #FFFFFF
-tintOpacity = 128
+tint = #B9C8FF
+tintOpacity = 72
 tintWindow = true
-tintBorder = 10
+tintBorder = 6
 
 # Highlighted in multi-select mode
 [multiselect]
@@ -144,17 +144,17 @@ tintOpacity = 196
 
 # Windows of type _NET_WM_WINDOW_TYPE_DOCK
 [panel]
-show = true
+show = false
 backgroundTinting = true
 reserveSpace = true
 
 # Windows of type _NET_WM_WINDOW_TYPE_DESKTOP
 [desktop]
-show = true
+show = false
 backgroundTinting = true
 
 # Label per display window
-# option = windowClass to display window class
+# option = windowTitle to display window class
 # option = windowTitle to display window title
 [label]
 show = true
@@ -162,13 +162,13 @@ option = windowClass
 offsetX = 0
 offsetY = -5
 width = 0.8
-border = #0e0e0e
-background = #111111
-backgroundHighlight = #999999
-opacity = 196
-text = white
-textOutline = #0e0e0e
-font = fixed-11:weight=bold
+border = #36415E
+background = #171D2D
+backgroundHighlight = #29334D
+opacity = 235
+text = #F4F6FA
+textOutline = none
+font = Inter-11:weight=semibold
 
 [bindings]
 

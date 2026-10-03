@@ -29,7 +29,8 @@
 
 static void layout_xd(MainWin *mw, dlist *windows,
 		unsigned int *total_width, unsigned int *total_height);
-static void layout_cosmos(MainWin *mw, dlist *windows,
+static void layout_cosmos(MainWin *mw, dlist *windows, unsigned int area_width,
+		unsigned int area_height,
 		unsigned int *total_width, unsigned int *total_height);
 
 // Redirect to the configured expose layout.  The selected implementation
@@ -73,7 +74,8 @@ layout_run(MainWin *mw, dlist *windows,
 		dlist *sorted_windows = dlist_dup(windows);
 		dlist_sort(sorted_windows, sort_cw_by_id, 0);
 		dlist_sort(sorted_windows, sort_cw_by_row, 0);
-		layout_cosmos(mw, sorted_windows, total_width, total_height);
+		layout_cosmos(mw, sorted_windows, mw->width, mw->height,
+				total_width, total_height);
 		dlist_free(sorted_windows);
 	}
 	else {
@@ -84,6 +86,25 @@ layout_run(MainWin *mw, dlist *windows,
 		// reversing the linked list again for proper focus ordering
 		dlist_reverse(windows);
 	}
+}
+
+void
+layout_run_monitor(MainWin *mw, dlist *windows, int origin_x, int origin_y,
+		unsigned int area_width, unsigned int area_height,
+		unsigned int *total_width, unsigned int *total_height)
+{
+	foreach_dlist (dlist_first(windows)) {
+		ClientWin *cw = iter->data;
+		cw->x = cw->src.x - origin_x;
+		cw->y = cw->src.y - origin_y;
+	}
+
+	dlist *sorted_windows = dlist_dup(windows);
+	dlist_sort(sorted_windows, sort_cw_by_id, 0);
+	dlist_sort(sorted_windows, sort_cw_by_row, 0);
+	layout_cosmos(mw, sorted_windows, area_width, area_height,
+			total_width, total_height);
+	dlist_free(sorted_windows);
 }
 
 // original legacy layout
@@ -598,7 +619,8 @@ run_final_settle(AabbWorld *world)
 }
 
 static void
-layout_cosmos(MainWin *mw, dlist *windows,
+layout_cosmos(MainWin *mw, dlist *windows, unsigned int area_width,
+		unsigned int area_height,
 		unsigned int *total_width, unsigned int *total_height)
 {
 	const float aspect_balance = 1.4f;
@@ -625,10 +647,10 @@ layout_cosmos(MainWin *mw, dlist *windows,
 		items[index++] = cw;
 	}
 
-	float monitor_aspect = (float) mw->width / (float) mw->height;
+	float monitor_aspect = (float) area_width / (float) area_height;
 	float padding = (float) mw->distance + rounding_padding;
 	unsigned int scatter_groups = run_scatter(items, count,
-			(float) mw->width, (float) mw->height,
+			(float) area_width, (float) area_height,
 			aspect_balance, padding, clearance);
 
 	int min_x, max_x, min_y, max_y;

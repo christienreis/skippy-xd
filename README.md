@@ -62,3 +62,7 @@ This fork adds a graceful close button to the top-right of every expose preview,
 uses `Delete` to close the selected preview, and underlines the first usable title
 character as a direct-focus mnemonic. Repeated mnemonic letters cycle through
 matching windows. The default expose configuration also cycles across desktops.
+With `showAllMonitors = true`, one expose surface spans the complete Xinerama
+desktop. Each preview stays on the physical monitor that owns its source window,
+while the directional focus graph remains global so arrow keys cross monitor
+edges naturally.

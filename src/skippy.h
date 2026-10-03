@@ -204,6 +204,7 @@ typedef struct {
 	bool pseudoTrans;
 
 	bool showOnlyCurrentMonitor;
+	bool showAllMonitors;
 	bool filterxscreen;
 	enum align horizontalPanelAlignment;
 	enum align verticalPanelAlignment;
@@ -305,6 +306,7 @@ typedef struct {
 	.pseudoTrans = true, \
 \
 	.showOnlyCurrentMonitor = false, \
+	.showAllMonitors = false, \
 	.filterxscreen = true, \
 	.horizontalPanelAlignment = 1, \
 	.verticalPanelAlignment = 1, \

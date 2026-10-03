@@ -19,6 +19,8 @@
 
 #include "skippy.h"
 
+#include <limits.h>
+
 void
 XRenderTintBorder(session_t *ps,
 		Drawable drawable,
@@ -527,6 +529,26 @@ mainwin_update(MainWin *mw)
 	
 	if(! mw->xin_info || ! mw->xin_screens)
 	{
+		mainwin_update_background(mw);
+		return;
+	}
+
+	if (ps->o.showAllMonitors && mw->xin_screens > 1) {
+		int min_x = INT_MAX, min_y = INT_MAX;
+		int max_x = INT_MIN, max_y = INT_MIN;
+		for (i = 0, iter = mw->xin_info; i < mw->xin_screens; ++i, ++iter) {
+			min_x = MIN(min_x, iter->x_org);
+			min_y = MIN(min_y, iter->y_org);
+			max_x = MAX(max_x, iter->x_org + iter->width);
+			max_y = MAX(max_y, iter->y_org + iter->height);
+		}
+		mw->x = min_x;
+		mw->y = min_y;
+		mw->width = max_x - min_x;
+		mw->height = max_y - min_y;
+		mw->xin_active = NULL;
+		XMoveResizeWindow(ps->dpy, mw->window, mw->x, mw->y,
+				mw->width, mw->height);
 		mainwin_update_background(mw);
 		return;
 	}

@@ -18,11 +18,13 @@
  */
 
 #include "skippy.h"
+
+#include <float.h>
+#include <limits.h>
 #include <errno.h>
 #include <locale.h>
 #include <getopt.h>
 #include <strings.h>
-#include <limits.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <libgen.h>
@@ -1389,6 +1391,94 @@ init_multiplier(MainWin *mw, unsigned int newwidth, unsigned int newheight,
 static void
 init_layout(MainWin *mw, enum layoutmode layout, Window leader)
 {
+#ifdef CFG_XINERAMA
+	if (layout == LAYOUTMODE_EXPOSE && mw->ps->o.showAllMonitors
+			&& mw->ps->o.exposeLayout == LAYOUT_COSMOS
+			&& mw->xin_info && mw->xin_screens > 1 && mw->clientondesktop) {
+		dlist **groups = calloc((size_t) mw->xin_screens, sizeof(*groups));
+		unsigned int *widths = calloc((size_t) mw->xin_screens, sizeof(*widths));
+		unsigned int *heights = calloc((size_t) mw->xin_screens, sizeof(*heights));
+
+		if (groups && widths && heights) {
+			foreach_dlist (mw->clientondesktop) {
+				ClientWin *cw = iter->data;
+				int cx = cw->src.x + (int) cw->src.width / 2;
+				int cy = cw->src.y + (int) cw->src.height / 2;
+				int selected = 0;
+				long long best_distance = LLONG_MAX;
+
+				for (int i = 0; i < mw->xin_screens; ++i) {
+					XineramaScreenInfo *screen = &mw->xin_info[i];
+					int nearest_x = MIN(MAX(cx, screen->x_org),
+							screen->x_org + screen->width);
+					int nearest_y = MIN(MAX(cy, screen->y_org),
+							screen->y_org + screen->height);
+					long long dx = (long long) cx - nearest_x;
+					long long dy = (long long) cy - nearest_y;
+					long long distance = dx * dx + dy * dy;
+					if (distance < best_distance) {
+						best_distance = distance;
+						selected = i;
+					}
+				}
+
+				groups[selected] = dlist_add(groups[selected], cw);
+			}
+
+			float multiplier = FLT_MAX;
+			for (int i = 0; i < mw->xin_screens; ++i) {
+				if (!groups[i])
+					continue;
+				XineramaScreenInfo *screen = &mw->xin_info[i];
+				layout_run_monitor(mw, dlist_first(groups[i]),
+						screen->x_org, screen->y_org, screen->width,
+						screen->height, &widths[i], &heights[i]);
+				float available_width = MAX(1, screen->width - 2 * mw->distance);
+				float available_height = MAX(1, screen->height - 2 * mw->distance);
+				float group_scale = MIN(available_width / MAX(1, widths[i]),
+						available_height / MAX(1, heights[i]));
+				multiplier = MIN(multiplier, group_scale);
+			}
+
+			if (multiplier == FLT_MAX)
+				multiplier = 1.0f;
+			if (!mw->ps->o.upscaleWindows)
+				multiplier = MIN(multiplier, 1.0f);
+			multiplier = MAX(multiplier, 0.01f);
+
+			for (int i = 0; i < mw->xin_screens; ++i) {
+				if (!groups[i])
+					continue;
+				XineramaScreenInfo *screen = &mw->xin_info[i];
+				float offset_x = ((float) screen->x_org - mw->x) / multiplier
+						+ ((float) screen->width / multiplier - widths[i]) / 2.0f;
+				float offset_y = ((float) screen->y_org - mw->y) / multiplier
+						+ ((float) screen->height / multiplier - heights[i]) / 2.0f;
+				foreach_dlist (dlist_first(groups[i])) {
+					ClientWin *cw = iter->data;
+					cw->x += (int) lroundf(offset_x);
+					cw->y += (int) lroundf(offset_y);
+				}
+			}
+
+			mw->multiplier = multiplier;
+			mw->xoff = 0;
+			mw->yoff = 0;
+			for (int i = 0; i < mw->xin_screens; ++i)
+				dlist_free(groups[i]);
+			free(groups);
+			free(widths);
+			free(heights);
+			init_focus(mw, layout, leader);
+			return;
+		}
+
+		free(groups);
+		free(widths);
+		free(heights);
+	}
+#endif /* CFG_XINERAMA */
+
 	unsigned int newwidth = 100, newheight = 100;
 	if (mw->clientondesktop)
 		layout_run(mw, mw->clientondesktop, &newwidth, &newheight);
@@ -3082,6 +3172,7 @@ load_config_file(session_t *ps)
     config_get_bool_wrap(config, "system", "pseudoTrans", &ps->o.pseudoTrans);
 
     config_get_bool_wrap(config, "multimonitor", "showOnlyCurrentMonitor", &ps->o.showOnlyCurrentMonitor);
+    config_get_bool_wrap(config, "multimonitor", "showAllMonitors", &ps->o.showAllMonitors);
     config_get_bool_wrap(config, "multimonitor", "showOnlyCurrentScreen", &ps->o.filterxscreen);
 	{
 		const char* align_str = config_get(config, "multimonitor",

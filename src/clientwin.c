@@ -45,8 +45,8 @@ void XRoundedRectTint(session_t *ps,
 void clientwin_round_corners(ClientWin *cw);
 
 #define NIXLOOM_CLOSE_SIZE 40
-#define NIXLOOM_CLOSE_RIGHT 2
-#define NIXLOOM_CLOSE_TOP 2
+#define NIXLOOM_CLOSE_RIGHT -3
+#define NIXLOOM_CLOSE_TOP -3
 
 static bool
 clientwin_close_hit(ClientWin *cw, int x, int y) {
@@ -67,8 +67,8 @@ clientwin_render_close(ClientWin *cw) {
 	int x = cw->mini.width - NIXLOOM_CLOSE_RIGHT - NIXLOOM_CLOSE_SIZE;
 	int y = NIXLOOM_CLOSE_TOP;
 	XRenderColor background = cw->close_hover
-		? (XRenderColor) { 0xb600, 0x5400, 0x5d00, 0xf200 }
-		: (XRenderColor) { 0x1800, 0x1600, 0x1e00, 0xd800 };
+		? (XRenderColor) { 0xdf00, 0x4300, 0x5100, 0xffff }
+		: (XRenderColor) { 0x9200, 0x2f00, 0x3d00, 0xf200 };
 	XRoundedRectTint(cw->mainwin->ps, cw->destination, &background,
 		x, y, NIXLOOM_CLOSE_SIZE, NIXLOOM_CLOSE_SIZE, 5);
 

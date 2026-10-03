@@ -48,6 +48,10 @@ pseudoTrans = false
 # Filter windows by Xinerama monitor
 showOnlyCurrentMonitor = false
 
+# Cover the complete Xinerama desktop and keep previews on the monitor that
+# owns their real window. Arrow-key focus remains shared across every monitor.
+showAllMonitors = true
+
 # Display only windows on the current XScreen
 showOnlyCurrentScreen = true
 

@@ -44,17 +44,18 @@ void XRoundedRectTint(session_t *ps,
 
 void clientwin_round_corners(ClientWin *cw);
 
-#define NIXLOOM_CLOSE_SIZE 32
-#define NIXLOOM_CLOSE_MARGIN 8
+#define NIXLOOM_CLOSE_SIZE 40
+#define NIXLOOM_CLOSE_RIGHT 2
+#define NIXLOOM_CLOSE_TOP 2
 
 static bool
 clientwin_close_hit(ClientWin *cw, int x, int y) {
 	if (!cw || cw->paneltype != WINTYPE_WINDOW || cw->mini.width < 64 || cw->mini.height < 64)
 		return false;
-	return x >= cw->mini.width - NIXLOOM_CLOSE_MARGIN - NIXLOOM_CLOSE_SIZE
-		&& x < cw->mini.width - NIXLOOM_CLOSE_MARGIN
-		&& y >= NIXLOOM_CLOSE_MARGIN
-		&& y < NIXLOOM_CLOSE_MARGIN + NIXLOOM_CLOSE_SIZE;
+	return x >= cw->mini.width - NIXLOOM_CLOSE_RIGHT - NIXLOOM_CLOSE_SIZE
+		&& x < cw->mini.width - NIXLOOM_CLOSE_RIGHT
+		&& y >= NIXLOOM_CLOSE_TOP
+		&& y < NIXLOOM_CLOSE_TOP + NIXLOOM_CLOSE_SIZE;
 }
 
 static void
@@ -63,22 +64,22 @@ clientwin_render_close(ClientWin *cw) {
 			|| cw->mini.width < 64 || cw->mini.height < 64)
 		return;
 
-	int x = cw->mini.width - NIXLOOM_CLOSE_MARGIN - NIXLOOM_CLOSE_SIZE;
-	int y = NIXLOOM_CLOSE_MARGIN;
+	int x = cw->mini.width - NIXLOOM_CLOSE_RIGHT - NIXLOOM_CLOSE_SIZE;
+	int y = NIXLOOM_CLOSE_TOP;
 	XRenderColor background = cw->close_hover
 		? (XRenderColor) { 0xb600, 0x5400, 0x5d00, 0xf200 }
 		: (XRenderColor) { 0x1800, 0x1600, 0x1e00, 0xd800 };
 	XRoundedRectTint(cw->mainwin->ps, cw->destination, &background,
-		x, y, NIXLOOM_CLOSE_SIZE, NIXLOOM_CLOSE_SIZE, 8);
+		x, y, NIXLOOM_CLOSE_SIZE, NIXLOOM_CLOSE_SIZE, 5);
 
 	XColor color, exact;
 	if (XAllocNamedColor(cw->mainwin->ps->dpy, cw->mainwin->colormap,
 			"#F4F6FA", &color, &exact)) {
 		GC gc = XCreateGC(cw->mainwin->ps->dpy, cw->pixmap, 0, NULL);
 		XSetForeground(cw->mainwin->ps->dpy, gc, color.pixel);
-		XSetLineAttributes(cw->mainwin->ps->dpy, gc, 3, LineSolid, CapRound, JoinRound);
-		XDrawLine(cw->mainwin->ps->dpy, cw->pixmap, gc, x + 10, y + 10, x + 22, y + 22);
-		XDrawLine(cw->mainwin->ps->dpy, cw->pixmap, gc, x + 22, y + 10, x + 10, y + 22);
+		XSetLineAttributes(cw->mainwin->ps->dpy, gc, 4, LineSolid, CapRound, JoinRound);
+		XDrawLine(cw->mainwin->ps->dpy, cw->pixmap, gc, x + 12, y + 12, x + 28, y + 28);
+		XDrawLine(cw->mainwin->ps->dpy, cw->pixmap, gc, x + 28, y + 12, x + 12, y + 28);
 		XFreeGC(cw->mainwin->ps->dpy, gc);
 	}
 }

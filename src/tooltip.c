@@ -18,6 +18,7 @@
  */
 
 #include "skippy.h"
+#include <ctype.h>
 
 void
 tooltip_destroy(Tooltip *tt)
@@ -69,6 +70,7 @@ tooltip_create(MainWin *mw) {
 	tt->font = 0;
 	tt->draw = 0;
 	tt->text = 0;
+	tt->mnemonic_index = -1;
 	tt->color.pixel = tt->background.pixel = tt->border.pixel = tt->outline.pixel = None;
 	
 	{
@@ -205,7 +207,18 @@ tooltip_map(Tooltip *tt, ClientWin *cw, FcChar8 *text, int len)
 	
 	tt->text = (FcChar8 *)malloc(len);
 	memcpy(tt->text, text, len);
-	
+
+	/* Expose the first usable title character as a keyboard mnemonic. */
+	tt->mnemonic_index = -1;
+	cw->mnemonic = 0;
+	for (int i = 0; i < len; i++) {
+		if ((unsigned char) text[i] < 0x80 && isalnum((unsigned char) text[i])) {
+			tt->mnemonic_index = i;
+			cw->mnemonic = tolower((unsigned char) text[i]);
+			break;
+		}
+	}
+
 	tt->text_len = len;
 	
 	XMapWindow(ps->dpy, tt->window);
@@ -236,6 +249,7 @@ tooltip_unmap(Tooltip *tt)
 		free(tt->text);
 	tt->text = 0;
 	tt->text_len = 0;
+	tt->mnemonic_index = -1;
 }
 
 void
@@ -272,4 +286,16 @@ tooltip_draw(Tooltip *tt, bool focused)
 	XftDrawStringUtf8(tt->draw, &tt->color, tt->font,
 			base_x, base_y,
 			tt->text, tt->text_len);
+
+	/* Underline the mnemonic so its direct-focus shortcut is discoverable. */
+	if (tt->mnemonic_index >= 0 && tt->mnemonic_index < tt->text_len) {
+		XGlyphInfo prefix = {0}, glyph = {0};
+		if (tt->mnemonic_index > 0)
+			XftTextExtentsUtf8(tt->mainwin->ps->dpy, tt->font, tt->text,
+				tt->mnemonic_index, &prefix);
+		XftTextExtentsUtf8(tt->mainwin->ps->dpy, tt->font,
+			tt->text + tt->mnemonic_index, 1, &glyph);
+		XftDrawRect(tt->draw, &tt->color, base_x + prefix.xOff,
+			base_y + 2, MAX(2, glyph.xOff), 1);
+	}
 }

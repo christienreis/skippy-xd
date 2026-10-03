@@ -18,6 +18,7 @@
  */
 
 #include "skippy.h"
+#include <ctype.h>
 
 #define INTERSECTS(x1, y1, w1, h1, x2, y2, w2, h2) \
 	(((x1 >= x2 && x1 < (x2 + w2)) || (x2 >= x1 && x2 < (x1 + w1))) && \
@@ -42,6 +43,45 @@ void XRoundedRectTint(session_t *ps,
 		int radius);
 
 void clientwin_round_corners(ClientWin *cw);
+
+#define NIXLOOM_CLOSE_SIZE 32
+#define NIXLOOM_CLOSE_MARGIN 8
+
+static bool
+clientwin_close_hit(ClientWin *cw, int x, int y) {
+	if (!cw || cw->paneltype != WINTYPE_WINDOW || cw->mini.width < 64 || cw->mini.height < 64)
+		return false;
+	return x >= cw->mini.width - NIXLOOM_CLOSE_MARGIN - NIXLOOM_CLOSE_SIZE
+		&& x < cw->mini.width - NIXLOOM_CLOSE_MARGIN
+		&& y >= NIXLOOM_CLOSE_MARGIN
+		&& y < NIXLOOM_CLOSE_MARGIN + NIXLOOM_CLOSE_SIZE;
+}
+
+static void
+clientwin_render_close(ClientWin *cw) {
+	if (!cw || cw->paneltype != WINTYPE_WINDOW || !cw->destination
+			|| cw->mini.width < 64 || cw->mini.height < 64)
+		return;
+
+	int x = cw->mini.width - NIXLOOM_CLOSE_MARGIN - NIXLOOM_CLOSE_SIZE;
+	int y = NIXLOOM_CLOSE_MARGIN;
+	XRenderColor background = cw->close_hover
+		? (XRenderColor) { 0xb600, 0x5400, 0x5d00, 0xf200 }
+		: (XRenderColor) { 0x1800, 0x1600, 0x1e00, 0xd800 };
+	XRoundedRectTint(cw->mainwin->ps, cw->destination, &background,
+		x, y, NIXLOOM_CLOSE_SIZE, NIXLOOM_CLOSE_SIZE, 8);
+
+	XColor color, exact;
+	if (XAllocNamedColor(cw->mainwin->ps->dpy, cw->mainwin->colormap,
+			"#F4F6FA", &color, &exact)) {
+		GC gc = XCreateGC(cw->mainwin->ps->dpy, cw->pixmap, 0, NULL);
+		XSetForeground(cw->mainwin->ps->dpy, gc, color.pixel);
+		XSetLineAttributes(cw->mainwin->ps->dpy, gc, 3, LineSolid, CapRound, JoinRound);
+		XDrawLine(cw->mainwin->ps->dpy, cw->pixmap, gc, x + 10, y + 10, x + 22, y + 22);
+		XDrawLine(cw->mainwin->ps->dpy, cw->pixmap, gc, x + 22, y + 10, x + 10, y + 22);
+		XFreeGC(cw->mainwin->ps->dpy, gc);
+	}
+}
 
 static void
 clientwin_render_desktop_cover_tint_border(ClientWin *cover, ClientWin *cw,
@@ -700,6 +740,8 @@ clientwin_repaint(ClientWin *cw, const XRectangle *pbound)
 			}
 		}
 
+		clientwin_render_close(cw);
+
 		if (ps->o.tooltip_show && ps->o.mode != PROGMODE_PAGING)
 			tooltip_draw(cw->tooltip, ps->o.multiselect? cw->multiselect: cw->focused);
 	}
@@ -1079,6 +1121,26 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 			focus_miniw_prev(ps, cw->mainwin->client_to_focus);
 		else if (arr_keycodes_includes(cw->mainwin->keycodes_Next, evk->keycode))
 			focus_miniw_next(ps, cw->mainwin->client_to_focus);
+		else {
+			KeySym sym = XLookupKeysym(evk, 0);
+			const char *name = XKeysymToString(sym);
+			if (name && name[0] && !name[1] && isalnum((unsigned char) name[0])) {
+				char mnemonic = tolower((unsigned char) name[0]);
+				dlist *start = dlist_find(mw->focuslist, clientwin_cmp_func,
+					(void *) mw->client_to_focus);
+				dlist *item = start && start->next ? start->next : dlist_first(mw->focuslist);
+				dlist *first = item;
+				while (item) {
+					ClientWin *candidate = item->data;
+					if (candidate->mnemonic == mnemonic) {
+						focus_miniw(ps, candidate);
+						break;
+					}
+					item = item->next ? item->next : dlist_first(mw->focuslist);
+					if (item == first) break;
+				}
+			}
+		}
 		cw->mainwin->pressed_key = true;
 	}
 
@@ -1115,12 +1177,19 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 
 	else if (ev->type == ButtonPress) {
 		cw->mainwin->pressed_mouse = true;
+		cw->close_pressed = ev->xbutton.button == Button1
+			&& clientwin_close_hit(cw, ev->xbutton.x, ev->xbutton.y);
 		/* if (ev->xbutton.button == 1)
 			cw->mainwin->pressed = cw; */
 	}
 	else if (ev->type == ButtonRelease) {
 		printfdf(false, "(): else if (ev->type == ButtonRelease) {");
 		const unsigned button = ev->xbutton.button;
+		if (button == Button1 && cw->close_pressed) {
+			cw->close_pressed = false;
+			if (clientwin_close_hit(cw, ev->xbutton.x, ev->xbutton.y))
+				return close_clientwindow(cw, CLIENTOP_CLOSE_EWMH);
+		}
 		if (cw->mainwin->pressed_mouse) {
 			if (button < MAX_MOUSE_BUTTONS) {
 				if (mw->client_to_focus->mode != CLIDISP_DESKTOP) {
@@ -1194,12 +1263,22 @@ clientwin_handle(ClientWin *cw, XEvent *ev) {
 	} else if(ev->type == MotionNotify) {
 		printfdf(false, "(): else if (ev->type == MotionNotify) {");
 
+		bool close_hover = clientwin_close_hit(cw, ev->xmotion.x, ev->xmotion.y);
+		if (close_hover != cw->close_hover) {
+			cw->close_hover = close_hover;
+			clientwin_render(cw);
+		}
+
 		if (cw->mainwin->client_to_focus != cw) {
 			XSetInputFocus(ps->dpy, cw->mini.window, RevertToParent, CurrentTime);
 			cw->mainwin->client_to_focus = cw;
 		}
 	} else if(ev->type == LeaveNotify) {
 		printfdf(false, "(): else if (ev->type == LeaveNotify) {");
+		if (cw->close_hover) {
+			cw->close_hover = false;
+			clientwin_render(cw);
+		}
 	}
 	return 0;
 }

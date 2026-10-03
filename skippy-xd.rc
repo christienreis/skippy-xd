@@ -76,7 +76,7 @@ switchCycleDuringWait = false
 
 # Enable to cycle through all virtual desktops
 switchCycleDesktops = false
-exposeCycleDesktops = false
+exposeCycleDesktops = true
 
 # Relative minimal pixel distance between windows
 distance = 50
@@ -201,7 +201,7 @@ keysPrev = p
 
 keysIconify = 1
 keysShade = 2
-keysClose = 3
+keysClose = Delete
 
 # Mouse button bindings, options include
 # "no": do nothing

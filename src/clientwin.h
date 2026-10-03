@@ -57,6 +57,11 @@ struct _clientwin_t {
 	bool damaged;
 	bool mapped;
 
+	/* Nixloom expose controls. */
+	bool close_hover;
+	bool close_pressed;
+	char mnemonic;
+
 	bool zombie;
 	wintype_t paneltype;
 	/* XserverRegion repair; */

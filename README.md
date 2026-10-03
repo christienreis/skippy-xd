@@ -54,3 +54,11 @@ And please! If you share our love for skippy-xd, please do:
 * Use it! Nothing is more rewarding to developers than widespread adoption of the app.
 * Share it! Tell others about the app. Showcase screenshots and videos. Package it for your distros.
 * Improve it! Make suggestions on feature improvements. Report bugs and they will be fixed. If you are a coder, start hacking!
+
+
+## Nixloom additions
+
+This fork adds a graceful close button to the top-right of every expose preview,
+uses `Delete` to close the selected preview, and underlines the first usable title
+character as a direct-focus mnemonic. Repeated mnemonic letters cycle through
+matching windows. The default expose configuration also cycles across desktops.

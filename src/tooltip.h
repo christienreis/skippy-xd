@@ -34,6 +34,7 @@ struct _Tooltip {
 	
 	FcChar8 *text;
 	int text_len;
+	int mnemonic_index;
 };
 typedef struct _Tooltip Tooltip;
 

@@ -19,6 +19,7 @@
 
 #include "skippy.h"
 #include <ctype.h>
+#include <limits.h>
 
 void
 tooltip_destroy(Tooltip *tt)
@@ -208,17 +209,52 @@ tooltip_map(Tooltip *tt, ClientWin *cw, FcChar8 *text, int len)
 	tt->text = (FcChar8 *)malloc(len);
 	memcpy(tt->text, text, len);
 
-	/* Expose the first usable title character as a keyboard mnemonic. */
+	/* Prefer the first title character not already assigned to another preview.
+	 * This naturally falls through to the second or later character for titles
+	 * with the same prefix. If every usable character is occupied, retain the
+	 * first one so repeated presses can still cycle matching windows. */
 	tt->mnemonic_index = -1;
+	char previous_mnemonic = cw->mnemonic;
+	if (previous_mnemonic) {
+		for (int i = 0; i < len; i++) {
+			if ((unsigned char) text[i] < 0x80
+					&& tolower((unsigned char) text[i]) == previous_mnemonic) {
+				tt->mnemonic_index = i;
+				break;
+			}
+		}
+		if (tt->mnemonic_index >= 0)
+			goto mnemonic_assigned;
+	}
+	bool used[UCHAR_MAX + 1] = { false };
+	foreach_dlist(dlist_first(cw->mainwin->focuslist)) {
+		ClientWin *candidate = iter->data;
+		if (candidate != cw && candidate->mnemonic)
+			used[(unsigned char) candidate->mnemonic] = true;
+	}
+	int fallback_index = -1;
+	char fallback_mnemonic = 0;
 	cw->mnemonic = 0;
 	for (int i = 0; i < len; i++) {
 		if ((unsigned char) text[i] < 0x80 && isalnum((unsigned char) text[i])) {
+			char mnemonic = tolower((unsigned char) text[i]);
+			if (fallback_index < 0) {
+				fallback_index = i;
+				fallback_mnemonic = mnemonic;
+			}
+			if (used[(unsigned char) mnemonic])
+				continue;
 			tt->mnemonic_index = i;
-			cw->mnemonic = tolower((unsigned char) text[i]);
+			cw->mnemonic = mnemonic;
 			break;
 		}
 	}
+	if (!cw->mnemonic && fallback_index >= 0) {
+		tt->mnemonic_index = fallback_index;
+		cw->mnemonic = fallback_mnemonic;
+	}
 
+mnemonic_assigned:
 	tt->text_len = len;
 	
 	XMapWindow(ps->dpy, tt->window);

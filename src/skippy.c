@@ -1729,6 +1729,12 @@ skippy_activate(MainWin *mw, enum layoutmode layout, Window leader)
 	else
 		init_layout(mw, layout, leader);
 
+	/* tooltip_map assigns unique title mnemonics in preview mapping order. */
+	foreach_dlist(mw->clientondesktop) {
+		ClientWin *cw = iter->data;
+		cw->mnemonic = 0;
+	}
+
 	foreach_dlist(mw->clientondesktop) {
 		ClientWin *cw = iter->data;
 		cw->src.x -= mw->x;
